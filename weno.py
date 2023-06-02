@@ -16,7 +16,7 @@ def weno_pre(xs, xp, fp, assume_sorted=False, order=4, uniform=False):
         xp = np.ascontiguousarray(xp[ord])
         fp = np.ascontiguousarray(fp[ord])
 
-    return weno(xs, xp, fp, order=order)
+    return weno(xs, xp, fp, order=order, uniform=uniform)
 
 
 def weno(xs, xp, fp, order=4, uniform=False):
@@ -100,7 +100,6 @@ def weno(xs, xp, fp, order=4, uniform=False):
     p, q, l = pql_pattern(order)
     EPS = 10**(-6)
     alpha = 1
-    prev_beta_idx = -1
     pattern_changed = False
 
     for idx, x in enumerate(xs_flat):
@@ -150,6 +149,60 @@ def weno(xs, xp, fp, order=4, uniform=False):
     return fs_flat
 
 
+def weno5(w, N):
+    # R = 3, i = 2:(N-3)
+    vmm = np.asarray(w[:, 0:N-5])
+    vm = np.asarray(w[:, 1:N-4])
+    vo = np.asarray(w[:, 2:N-3])
+    vp = np.asarray(w[:, 3:N-2])
+    vpp = np.asarray(w[:, 4:N-1])
+
+    B0n = 13/12*(vmm-2*vm+vo)**2 + 1/4*(vmm-4*vm+3*vo)**2
+    B1n = 13/12*(vm-2*vo+vp)**2 + 1/4*(vm-vp)**2
+    B2n = 13/12*(vo-2*vp+vpp)**2 + 1/4*(3*vo-4*vp+vpp)**2
+
+    d0n = 1/10
+    d1n = 6/10
+    d2n = 3/10
+    EPS = 10**(-6)
+    alpha = 2
+
+    alpha0n = d0n/(EPS+B0n)**alpha
+    alpha1n = d1n/(EPS+B1n)**alpha
+    alpha2n = d2n/(EPS+B2n)**alpha
+
+    w0n = alpha0n/(alpha0n+alpha1n+alpha2n)
+    w1n = alpha1n/(alpha0n+alpha1n+alpha2n)
+    w2n = alpha2n/(alpha0n+alpha1n+alpha2n)
+
+    wn = w0n*(2*vmm-7*vm+11*vo)/6 + w1n*(-vm+5*vo+2*vp)/6+w2n*(2*vo+5*vp-vpp)/6
+
+    umm = np.asarray(w[:, 1:N-4])
+    um = np.asarray(w[:, 2:N-3])
+    uo = np.asarray(w[:, 3:N-2])
+    up = np.asarray(w[:, 4:N-1])
+    upp = np.asarray(w[:, 5:N])
+
+    B0p = 13/12*(umm-2*um+uo)**2 + 1/4*(umm-4*um+3*uo)**2
+    B1p = 13/12*(um-2*uo+up)**2 + 1/4*(um-up)**2
+    B2p = 13/12*(uo-2*up+upp)**2 + 1/4*(3*uo-4*up+upp)**2
+
+    d0p = 3/10
+    d1p = 6/10
+    d2p = 1/10
+
+    alpha0p = d0p/(EPS+B0p)**alpha
+    alpha1p = d1p/(EPS+B1p)**alpha
+    alpha2p = d2p/(EPS+B2p)**alpha
+
+    w0p = alpha0p/(alpha0p+alpha1p+alpha2p)
+    w1p = alpha1p/(alpha0p+alpha1p+alpha2p)
+    w2p = alpha2p/(alpha0p+alpha1p+alpha2p)
+
+    wp = w0p*(-umm+5*um+2*uo)/6 + w1p*(2*um+5*uo-up)/6 + w2p*(11*uo-7*up+2*upp)/6
+
+    return wn, wp
+
 
 def test_weno():
     N = 36
@@ -193,4 +246,4 @@ def test_weno():
     ax[0, 0].legend()
     plt.show()
 
-test_weno()
+#test_weno()
