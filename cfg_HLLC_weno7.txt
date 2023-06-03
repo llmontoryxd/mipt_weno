@@ -1,0 +1,12 @@
+L0 0.0
+Lx 1.0
+CFL 0.55
+t_f 0.12
+nx 100
+gamma 1.4
+IC Lax
+BC Riemann
+Flux HLLC
+Recon weno7
+Solver fv1d
+

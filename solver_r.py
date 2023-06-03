@@ -3,7 +3,7 @@ import BC
 import weno
 
 
-def fd_ee1d(a, gamma, q, nx, dx, R, f_split, recon, x, BC_case):
+def fv_ee1d(a, gamma, q, nx, dx, R, f_split, recon, x, BC_case):
     q = BC.BC(q, R, BC_case)
     #print(q)
     w = np.zeros((3, np.shape(q)[1]))
@@ -11,16 +11,7 @@ def fd_ee1d(a, gamma, q, nx, dx, R, f_split, recon, x, BC_case):
     w[1, :] = q[1, :]/q[0, :]
     w[2, :] = (gamma-1)*(q[2, :] - 0.5*(q[1, :]**2)/q[0, :])
 
-    if recon == weno.weno5:
-        wL, wR = recon(w, nx)
-    elif recon == weno.weno_pre:
-        xc = x + dx/2
-        wL = np.zeros(np.shape(w))
-        wR = np.zeros(np.shape(w))
-        for j in range(np.shape(wL)[0]):
-            print(np.shape(wL), np.shape(wR), np.shape(w))
-            wR[j, :] = recon(xc, x, w[j, :], order=4)
-            wL[j, :] = recon(xc, x, w[j, :], order=4)
+    wL, wR = recon(w, nx)
 
     qL = np.zeros((3, np.shape(wL)[1]))
     qR = np.zeros((3, np.shape(wR)[1]))

@@ -149,6 +149,59 @@ def weno(xs, xp, fp, order=4, uniform=False):
     return fs_flat
 
 
+def weno3(w, N):
+    # R = 2, i = 1:(N-2)
+    vm = np.asarray(w[:, 0:N-3])
+    vo = np.asarray(w[:, 1:N-2])
+    vp = np.asarray(w[:, 2:N-1])
+
+    #B0n = (vo - vm)**2
+    #B1n = (vp - vo)**2
+    B0n = 1/4*(np.abs(vp - vm) - np.abs(4*vo - 3*vm - vp))**2
+    B1n = 1/4*(np.abs(vp - vm) - np.abs(4*vo - vm - 3*vp))**2
+
+
+    d0n = 1/3
+    d1n = 2/3
+
+    EPS = 10**(-6)
+    alpha = 2
+
+    alpha0n = d0n/(EPS+B0n)**alpha
+    alpha1n = d1n/(EPS+B1n)**alpha
+    alphasumn = alpha0n+alpha1n
+
+    w0n = alpha0n/alphasumn
+    w1n = alpha1n/alphasumn
+
+    #wn = w0n*(vm + 3*vo)/4 + w1n*(5*vo - vp)/4
+    wn = w0n*(-vm + 3*vo)/2 + w1n*(vo + vp)/2
+
+    um = np.asarray(w[:, 1:N-2])
+    uo = np.asarray(w[:, 2:N-1])
+    up = np.asarray(w[:, 3:N])
+
+    #B0p = (uo - um)**2
+    #B1p = (up - uo)**2
+    B0p = 1 / 4 * (np.abs(up - um) - np.abs(4 * uo - 3 * um - up)) ** 2
+    B1p = 1 / 4 * (np.abs(up - um) - np.abs(4 * uo - um - 3 * up)) ** 2
+
+    d0p = 2/3
+    d1p = 1/3
+
+    alpha0p = d0p / (EPS + B0p) ** alpha
+    alpha1p = d1p / (EPS + B1p) ** alpha
+    alphasump = alpha0p + alpha1p
+
+    w0p = alpha0p / alphasump
+    w1p = alpha1p / alphasump
+
+    #wp = w0p*(5*uo - um)/4 + w1p*(up + 3*uo)/4
+    wp = w0p*(uo+um)/2 + w1p*(-up+3*uo)/2
+
+    return wn, wp
+
+
 def weno5(w, N):
     # R = 3, i = 2:(N-3)
     vmm = np.asarray(w[:, 0:N-5])
@@ -164,6 +217,7 @@ def weno5(w, N):
     d0n = 1/10
     d1n = 6/10
     d2n = 3/10
+
     EPS = 10**(-6)
     alpha = 2
 
@@ -200,6 +254,90 @@ def weno5(w, N):
     w2p = alpha2p/(alpha0p+alpha1p+alpha2p)
 
     wp = w0p*(-umm+5*um+2*uo)/6 + w1p*(2*um+5*uo-up)/6 + w2p*(11*uo-7*up+2*upp)/6
+
+    return wn, wp
+
+
+def weno7(w, N):
+    # R = 4, i = 3:(N-4)
+    vmmm = np.asarray(w[:, 0:N-7])
+    vmm = np.asarray(w[:, 1:N-6])
+    vm = np.asarray(w[:, 2:N-5])
+    vo = np.asarray(w[:, 3:N-4])
+    vp = np.asarray(w[:, 4:N-3])
+    vpp = np.asarray(w[:, 5:N-2])
+    vppp = np.asarray(w[:, 6:N-1])
+
+
+    B0n = vm * (134241 * vm - 114894 * vo) + vmmm * (56694 * vm - 47214 * vmm + 6649 * vmmm - 22778 * vo) +\
+        25729 * vo ** 2 + vmm * (-210282 * vm + 85641 * vmm + 86214 * vo)
+    B1n = vo * (41001 * vo - 30414 * vp) + vmm * (-19374 * vm + 3169 * vmm + 19014 * vo - 5978 * vp) +\
+        6649 * vp ** 2 + vm * (33441 * vm - 70602 * vo + 23094 * vp)
+    B2n = vp * (33441 * vp - 19374 * vpp) + vm * (6649 * vm - 30414 * vo + 23094 * vp - 5978 * vpp) +\
+        3169 * vpp ** 2 + vo * (41001 * vo - 70602 * vp + 19014 * vpp)
+    B3n = vpp * (85641 * vpp - 47214 * vppp) + vo * (25729 * vo - 114894 * vp + 86214 * vpp - 22778 * vppp) +\
+        6649 * vppp ** 2 + vp * (134241 * vp - 210282 * vpp + 56694 * vppp)
+
+    g0 = 1/35
+    g1 = 12/35
+    g2 = 18/35
+    g3 = 4/35
+
+    EPS = 10**(-6)
+    alpha = 2
+
+    alpha0n = g0 / (EPS + B0n) ** alpha
+    alpha1n = g1 / (EPS + B1n) ** alpha
+    alpha2n = g2 / (EPS + B2n) ** alpha
+    alpha3n = g3 / (EPS + B3n) ** alpha
+    alphasummn = alpha0n+alpha1n+alpha2n+alpha3n
+
+    w0n = alpha0n / alphasummn
+    w1n = alpha1n / alphasummn
+    w2n = alpha2n / alphasummn
+    w3n = alpha3n / alphasummn
+
+    wn = w0n*(-3*vmmm + 13*vmm - 23*vm + 25*vo)/12 + w1n*(1*vmm - 5*vm + 13*vo + 3*vp)/12 +\
+        w2n*(-1*vm + 7*vo + 7*vp - 1*vpp)/12 + w3n*(3*vo + 13*vp - 5*vpp + 1*vppp)/12
+
+
+
+    ummm = np.asarray(w[:, 1:N - 6])
+    umm = np.asarray(w[:, 2:N - 5])
+    um = np.asarray(w[:, 3:N - 4])
+    uo = np.asarray(w[:, 4:N - 3])
+    up = np.asarray(w[:, 5:N - 2])
+    upp = np.asarray(w[:, 6:N - 1])
+    uppp = np.asarray(w[:, 7:N])
+
+
+    B0p = um * (134241 * um - 114894 * uo) + ummm * (56694 * um - 47214 * umm + 6649 * ummm - 22778 * uo) +\
+        25729 * uo ** 2 + umm * (-210282 * um + 85641 * umm + 86214 * uo)
+    B1p = uo * (41001 * uo - 30414 * up) + umm * (-19374 * um + 3169 * umm + 19014 * uo - 5978 * up) +\
+        6649 * up ** 2 + um * (33441 * um - 70602 * uo + 23094 * up)
+    B2p = up * (33441 * up - 19374 * upp) + um * (6649 * um - 30414 * uo + 23094 * up - 5978 * upp) +\
+        3169 * upp ** 2 + uo * (41001 * uo - 70602 * up + 19014 * upp)
+    B3p = upp * (85641 * upp - 47214 * uppp) + uo * (25729 * uo - 114894 * up + 86214 * upp - 22778 * uppp) +\
+        6649 * uppp ** 2 + up * (134241 * up - 210282 * upp + 56694 * uppp)
+
+    g0 = 4/35
+    g1 = 18/35
+    g2 = 12/35
+    g3 = 1/35
+
+    alpha0p = g0 / (EPS + B0p) ** alpha
+    alpha1p = g1 / (EPS + B1p) ** alpha
+    alpha2p = g2 / (EPS + B2p) ** alpha
+    alpha3p = g3 / (EPS + B3p) ** alpha
+    alphasummp = alpha0p + alpha1p + alpha2p + alpha3p
+
+    w0p = alpha0p / alphasummp
+    w1p = alpha1p / alphasummp
+    w2p = alpha2p / alphasummp
+    w3p = alpha3p / alphasummp
+
+    wp = w0p*(1*ummm - 5*umm + 13*um + 3*uo)/12 + w1p*(-1*umm + 7*um + 7*uo - 1*up)/12 +\
+        w2p*(3*um + 13*uo - 5*up + 1*upp)/12 + w3p*(25*uo - 23*up + 13*upp - 3*uppp)/12
 
     return wn, wp
 

@@ -2,10 +2,22 @@ import numpy as np
 
 
 def IC(x, IC_case):
-    if IC_case == 'Sod':
+    if IC_case == "Sod":
         p = np.array([1, 0.1])
         u = np.array([0, 0])
         rho = np.array([1, 0.125])
+    elif IC_case == "Lax":
+        p = np.array([3.528, 0.571])
+        u = np.array([0.698, 0])
+        rho = np.array([0.445, 0.5])
+    elif IC_case == "Shock_Sod":
+        p = np.array([1.0, 0.1])
+        u = np.array([0.75, 0])
+        rho = np.array([1, 0.125])
+    elif IC_case == "Supersonic":
+        p = np.array([1.0, 0.02])
+        u = np.array([0, 0])
+        rho = np.array([1, 0.02])
     else:
         raise ValueError('Your IC is not exist')
 
