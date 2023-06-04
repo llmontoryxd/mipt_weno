@@ -8,9 +8,6 @@ def weno_pre(xs, xp, fp, assume_sorted=False, order=4, uniform=False):
     xp = np.asarray(xp)
     fp = np.asarray(fp)
 
-    # check errors
-    ...
-
     if not assume_sorted:
         ord = np.argsort(xp)
         xp = np.ascontiguousarray(xp[ord])
@@ -174,7 +171,6 @@ def weno3(w, N):
     w0n = alpha0n/alphasumn
     w1n = alpha1n/alphasumn
 
-    #wn = w0n*(vm + 3*vo)/4 + w1n*(5*vo - vp)/4
     wn = w0n*(-vm + 3*vo)/2 + w1n*(vo + vp)/2
 
     um = np.asarray(w[:, 1:N-2])
@@ -196,7 +192,6 @@ def weno3(w, N):
     w0p = alpha0p / alphasump
     w1p = alpha1p / alphasump
 
-    #wp = w0p*(5*uo - um)/4 + w1p*(up + 3*uo)/4
     wp = w0p*(uo+um)/2 + w1p*(-up+3*uo)/2
 
     return wn, wp
@@ -259,6 +254,28 @@ def weno5(w, N):
 
 
 def weno7(w, N):
+    def get_smooth_indicators(fmmm, fmm, fm, fo, fp, fpp, fppp):
+        B0 = fmmm*(547*fmmm - 3882*fmm + 4642*fm - 1854*fo) +\
+             fmm*(7043*fmm - 17246*fm + 7042*fo) +\
+             fm*(11003*fm - 9402*fo) + 2107*fo**2
+
+        B1 = fmm*(267*fmm - 1642*fm + 1602*fo - 494*fp) +\
+             fm*(2843*fm - 5966*fo + 1922*fp) +\
+             fo*(3443*fo - 2522*fp) + 547*fp**2
+
+        B2 = fm*(547*fm - 2522*fo + 1922*fp - 494*fpp) +\
+             fo*(3443*fo - 5966*fp + 1602*fpp) +\
+             fp*(2843*fp - 1642*fpp) + 267*fpp**2
+
+        B3 = fo*(2107*fo - 9402*fp + 7042*fpp - 1854*fppp) +\
+             fp*(11003*fp - 17246*fpp + 4642*fppp) +\
+             fpp*(7043*fpp - 3882*fppp) + 547*fppp**2
+
+        return B0, B1, B2, B3
+
+    def get_alpha(g, tau, eps, alpha, beta):
+        return g*(1+(tau)**alpha/(beta+eps)**alpha)
+
     # R = 4, i = 3:(N-4)
     vmmm = np.asarray(w[:, 0:N-7])
     vmm = np.asarray(w[:, 1:N-6])
@@ -269,27 +286,37 @@ def weno7(w, N):
     vppp = np.asarray(w[:, 6:N-1])
 
 
-    B0n = vm * (134241 * vm - 114894 * vo) + vmmm * (56694 * vm - 47214 * vmm + 6649 * vmmm - 22778 * vo) +\
-        25729 * vo ** 2 + vmm * (-210282 * vm + 85641 * vmm + 86214 * vo)
-    B1n = vo * (41001 * vo - 30414 * vp) + vmm * (-19374 * vm + 3169 * vmm + 19014 * vo - 5978 * vp) +\
-        6649 * vp ** 2 + vm * (33441 * vm - 70602 * vo + 23094 * vp)
-    B2n = vp * (33441 * vp - 19374 * vpp) + vm * (6649 * vm - 30414 * vo + 23094 * vp - 5978 * vpp) +\
-        3169 * vpp ** 2 + vo * (41001 * vo - 70602 * vp + 19014 * vpp)
-    B3n = vpp * (85641 * vpp - 47214 * vppp) + vo * (25729 * vo - 114894 * vp + 86214 * vpp - 22778 * vppp) +\
-        6649 * vppp ** 2 + vp * (134241 * vp - 210282 * vpp + 56694 * vppp)
+    #B0n = vm * (134241 * vm - 114894 * vo) + vmmm * (56694 * vm - 47214 * vmm + 6649 * vmmm - 22778 * vo) +\
+    #    25729 * vo ** 2 + vmm * (-210282 * vm + 85641 * vmm + 86214 * vo)
+    #B1n = vo * (41001 * vo - 30414 * vp) + vmm * (-19374 * vm + 3169 * vmm + 19014 * vo - 5978 * vp) +\
+    #    6649 * vp ** 2 + vm * (33441 * vm - 70602 * vo + 23094 * vp)
+    #B2n = vp * (33441 * vp - 19374 * vpp) + vm * (6649 * vm - 30414 * vo + 23094 * vp - 5978 * vpp) +\
+    #    3169 * vpp ** 2 + vo * (41001 * vo - 70602 * vp + 19014 * vpp)
+    #B3n = vpp * (85641 * vpp - 47214 * vppp) + vo * (25729 * vo - 114894 * vp + 86214 * vpp - 22778 * vppp) +\
+    #    6649 * vppp ** 2 + vp * (134241 * vp - 210282 * vpp + 56694 * vppp)
+
+    B0n, B1n, B2n, B3n = get_smooth_indicators(vmmm, vmm, vm, vo, vp, vpp, vppp)
+
+
 
     g0 = 1/35
     g1 = 12/35
     g2 = 18/35
     g3 = 4/35
 
-    EPS = 10**(-6)
-    alpha = 2
+    EPS = 10**(-10)
+    alpha = 4
+    tau = np.abs(B0n - B3n)
 
     alpha0n = g0 / (EPS + B0n) ** alpha
     alpha1n = g1 / (EPS + B1n) ** alpha
     alpha2n = g2 / (EPS + B2n) ** alpha
     alpha3n = g3 / (EPS + B3n) ** alpha
+
+    #alpha0n = get_alpha(g0, tau, EPS, alpha, B0n)
+    #alpha1n = get_alpha(g1, tau, EPS, alpha, B1n)
+    #alpha2n = get_alpha(g2, tau, EPS, alpha, B2n)
+    #alpha3n = get_alpha(g3, tau, EPS, alpha, B3n)
     alphasummn = alpha0n+alpha1n+alpha2n+alpha3n
 
     w0n = alpha0n / alphasummn
@@ -311,24 +338,33 @@ def weno7(w, N):
     uppp = np.asarray(w[:, 7:N])
 
 
-    B0p = um * (134241 * um - 114894 * uo) + ummm * (56694 * um - 47214 * umm + 6649 * ummm - 22778 * uo) +\
-        25729 * uo ** 2 + umm * (-210282 * um + 85641 * umm + 86214 * uo)
-    B1p = uo * (41001 * uo - 30414 * up) + umm * (-19374 * um + 3169 * umm + 19014 * uo - 5978 * up) +\
-        6649 * up ** 2 + um * (33441 * um - 70602 * uo + 23094 * up)
-    B2p = up * (33441 * up - 19374 * upp) + um * (6649 * um - 30414 * uo + 23094 * up - 5978 * upp) +\
-        3169 * upp ** 2 + uo * (41001 * uo - 70602 * up + 19014 * upp)
-    B3p = upp * (85641 * upp - 47214 * uppp) + uo * (25729 * uo - 114894 * up + 86214 * upp - 22778 * uppp) +\
-        6649 * uppp ** 2 + up * (134241 * up - 210282 * upp + 56694 * uppp)
+    #B0p = um * (134241 * um - 114894 * uo) + ummm * (56694 * um - 47214 * umm + 6649 * ummm - 22778 * uo) +\
+    #    25729 * uo ** 2 + umm * (-210282 * um + 85641 * umm + 86214 * uo)
+    #B1p = uo * (41001 * uo - 30414 * up) + umm * (-19374 * um + 3169 * umm + 19014 * uo - 5978 * up) +\
+    #    6649 * up ** 2 + um * (33441 * um - 70602 * uo + 23094 * up)
+    #B2p = up * (33441 * up - 19374 * upp) + um * (6649 * um - 30414 * uo + 23094 * up - 5978 * upp) +\
+    #    3169 * upp ** 2 + uo * (41001 * uo - 70602 * up + 19014 * upp)
+    #B3p = upp * (85641 * upp - 47214 * uppp) + uo * (25729 * uo - 114894 * up + 86214 * upp - 22778 * uppp) +\
+    #    6649 * uppp ** 2 + up * (134241 * up - 210282 * upp + 56694 * uppp)
+
+    B0p, B1p, B2p, B3p = get_smooth_indicators(ummm, umm, um, uo, up, upp, uppp)
 
     g0 = 4/35
     g1 = 18/35
     g2 = 12/35
     g3 = 1/35
 
+    tau = np.abs(B0p - B3p)
+
     alpha0p = g0 / (EPS + B0p) ** alpha
     alpha1p = g1 / (EPS + B1p) ** alpha
     alpha2p = g2 / (EPS + B2p) ** alpha
     alpha3p = g3 / (EPS + B3p) ** alpha
+
+    #alpha0p = get_alpha(g0, tau, EPS, alpha, B0p)
+    #alpha1p = get_alpha(g1, tau, EPS, alpha, B1p)
+    #alpha2p = get_alpha(g2, tau, EPS, alpha, B2p)
+    #alpha3p = get_alpha(g3, tau, EPS, alpha, B3p)
     alphasummp = alpha0p + alpha1p + alpha2p + alpha3p
 
     w0p = alpha0p / alphasummp
@@ -383,5 +419,3 @@ def test_weno():
     plot_test(ax[1, 1], xp, disc_sine, N_int)
     ax[0, 0].legend()
     plt.show()
-
-#test_weno()

@@ -5,7 +5,7 @@ import weno
 
 def fv_ee1d(a, gamma, q, nx, dx, R, f_split, recon, x, BC_case):
     q = BC.BC(q, R, BC_case)
-    #print(q)
+
     w = np.zeros((3, np.shape(q)[1]))
     w[0, :] = q[0, :]
     w[1, :] = q[1, :]/q[0, :]
@@ -21,8 +21,6 @@ def fv_ee1d(a, gamma, q, nx, dx, R, f_split, recon, x, BC_case):
     qR[0, :] = wR[0, :]
     qR[1, :] = wR[1, :] * wR[0, :]
     qR[2, :] = wR[2, :] / (gamma - 1) + 0.5 * wR[0, :] * wR[1, :] ** 2
-
-    #
 
     res = np.zeros(np.shape(w))
     flux = np.zeros(np.shape(qR))

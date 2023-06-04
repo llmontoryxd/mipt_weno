@@ -5,7 +5,6 @@ import flux_splitting
 import IC
 import exact_solution
 import solver_r
-import BC
 
 
 def plot_res(ax, xe, rese, x, res, labels):
@@ -93,7 +92,6 @@ def solve(filename):
     nx += 2 * R
     q0 = np.zeros([3, nx])
     q0[:, R:(nx - R)] = Q0
-    # print(q0)
 
     lambda0 = np.max(np.abs(u0) + a0)
     dt0 = CFL * dx / lambda0

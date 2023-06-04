@@ -1,10 +1,12 @@
 import tkinter as tk
 import numpy as np
+import matplotlib.pyplot as plt
 from tkinter import filedialog
 import Euler_solver
 
-find_diff = True
+find_diff = False
 get_weno_plot = True
+get_L_plot = True
 
 
 def choose_file(file_choose, for_weno_plot_path=None):
@@ -30,6 +32,16 @@ def get_max_diff(for_weno_plot_path1=None, for_weno_plot_path2=None):
     return max_diff
 
 
+def plot_weno(max_diff):
+    fig, ax = plt.subplots(1, 1, figsize=(8, 8), constrained_layout=True)
+    ax.plot(np.array([3, 5, 7]), max_diff, color='black')
+    ax.set_xlabel('WENO order')
+    ax.set_ylabel('max(|HLLE-HLLC|)')
+
+    filename_str = 'diff'
+    plt.savefig('outData/' + filename_str + '.png')
+
+
 if find_diff is False:
     Euler_solver.solve(filename=choose_file(False))
 else:
@@ -42,5 +54,7 @@ else:
         max_diff_weno5 = get_max_diff(path_HLLE_mask+'5.txt', path_HLLC_mask+'5.txt')
         max_diff_weno7 = get_max_diff(path_HLLE_mask+'7.txt', path_HLLC_mask+'7.txt')
         print(max_diff_weno3, max_diff_weno5, max_diff_weno7)
+        plot_weno(np.array([max_diff_weno3, max_diff_weno5, max_diff_weno7]))
+
 
 
